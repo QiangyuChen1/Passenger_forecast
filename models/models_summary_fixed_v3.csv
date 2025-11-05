@@ -1,0 +1,4 @@
+control_point,arima_order,aic,model_path
+Airport,"(2, 1, 1)",58.212557255410665,C:\Users\86181\Desktop\CITYU\SEMA\5001\Passenger_forecast\models\arima_fixed_v3_Airport.pkl
+Shenzhen Bay,"(0, 1, 2)",54.810853756085926,C:\Users\86181\Desktop\CITYU\SEMA\5001\Passenger_forecast\models\arima_fixed_v3_Shenzhen_Bay.pkl
+Hong Kong-Zhuhai-Macao Bridge,"(1, 1, 1)",75.62080747012092,C:\Users\86181\Desktop\CITYU\SEMA\5001\Passenger_forecast\models\arima_fixed_v3_Hong_Kong_Zhuhai_Macao_Bridge.pkl
