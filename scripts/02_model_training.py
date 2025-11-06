@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
 修复版模型训练脚本 V3 - 使用正确的口岸名称和修复的数据处理
+只使用2023年5月开始数据进行训练
 """
 
 import os
@@ -29,8 +30,7 @@ except ImportError as e:
     from src.model_trainer import ARIMAModelTrainer
 
 def train_models_fixed():
-    """使用修复的参数训练模型"""
-    print("🤖 开始修复版模型训练...")
+    print("🤖 开始模型训练 (使用2023年5月开始数据)...")
     
     # 初始化
     processor = DataProcessorFixed()
@@ -55,7 +55,14 @@ def train_models_fixed():
             # 准备数据（使用对数变换）
             print("- 准备训练数据...")
             ts_data = processor.prepare_training_data(control_point, use_log_transform=True)
+            
+            # 只使用2023年5月开始的数据
+            start_date = '2023-05-01'
+            end_date = '2025-12-31'
+            ts_data = ts_data[(ts_data.index >= start_date) & (ts_data.index <= end_date)]
+            
             print(f"- 数据点数: {len(ts_data)}")
+            print(f"- 数据范围: {ts_data.index.min().strftime('%Y-%m')} 到 {ts_data.index.max().strftime('%Y-%m')}")
             
             # 检查数据质量
             if len(ts_data) < 12:
@@ -93,7 +100,7 @@ def train_models_fixed():
             residuals = trainer.diagnose_model()
             
             # 保存模型
-            model_filename = f"arima_fixed_v3_{control_point.replace(' ', '_').replace('-', '_')}.pkl"
+            model_filename = f"arima_{control_point.replace(' ', '_').replace('-', '_')}_2023_05_onwards.pkl"
             model_path = os.path.join(Settings.MODEL_DIR, model_filename)
             
             with open(model_path, 'wb') as f:
@@ -102,14 +109,17 @@ def train_models_fixed():
                     'params': best_params,
                     'original_series': ts_data,
                     'used_log_transform': True,
-                    'control_point': control_point
+                    'control_point': control_point,
+                    'training_period': '2023-05-onwards'
                 }, f)
             
             # 存储模型信息
             models_info[control_point] = {
                 'model_path': model_path,
                 'params': best_params,
-                'aic': model.aic
+                'aic': model.aic,
+                'data_points': len(ts_data),
+                'training_period': '2023-05-onwards'
             }
             
             print(f"✅ {control_point} 模型训练完成并保存")
@@ -121,26 +131,33 @@ def train_models_fixed():
     
     # 保存模型信息汇总
     if models_info:
-        info_path = os.path.join(Settings.MODEL_DIR, 'models_summary_fixed_v3.csv')
+        info_path = os.path.join(Settings.MODEL_DIR, 'models_summary_2023_05_onwards.csv')
         summary_df = pd.DataFrame([
             {
                 'control_point': cp,
                 'arima_order': info['params'],
                 'aic': info['aic'],
+                'data_points': info['data_points'],
+                'training_period': info['training_period'],
                 'model_path': info['model_path']
             }
             for cp, info in models_info.items()
         ])
         summary_df.to_csv(info_path, index=False)
         
-        print(f"\n📋 修复版模型汇总已保存: {info_path}")
-        print(f"🎉 成功训练 {len(models_info)} 个修复版模型!")
+        print(f"\n📋 模型汇总已保存: {info_path}")
+        print(f"🎉 成功训练 {len(models_info)} 个模型!")
+        
+        # 打印模型比较
+        print("\n📊 模型性能比较:")
+        for cp, info in models_info.items():
+            print(f"  - {cp}: ARIMA{info['params']}, AIC: {info['aic']:.2f}, 数据点: {info['data_points']}")
     else:
-        print("❌ 没有成功训练任何修复版模型")
+        print("❌ 没有成功训练任何模型")
 
 if __name__ == "__main__":
     print("=" * 60)
-    print("🚀 启动修复版模型训练脚本")
+    print("🚀 启动模型训练脚本 (2023年5月开始数据)")
     print("=" * 60)
     train_models_fixed()
     print("=" * 60)

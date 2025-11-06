@@ -1,7 +1,4 @@
 #!/usr/bin/env python3
-"""
-数据探索脚本 - 替代 notebook 01_data_exploration.ipynb
-"""
 
 import os
 import sys
@@ -13,46 +10,57 @@ import seaborn as sns
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, project_root)
 
-print(f"🔍 项目根目录: {project_root}")
-print(f"🔍 Python路径: {sys.executable}")
+print(f"🔍 Project root: {project_root}")
+print(f"🔍 Python path: {sys.executable}")
 
 try:
     from config.settings import Settings
     from src.data_processor import DataProcessor
     from src.visualization import ResultVisualizer
-    print("✅ 所有模块导入成功")
+    print("✅ All modules imported successfully")
 except ImportError as e:
-    print(f"❌ 模块导入失败: {e}")
-    print("请检查项目结构是否正确")
+    print(f"❌ Module import failed: {e}")
+    print("Please check if the project structure is correct")
     sys.exit(1)
 
 def explore_data():
-    """执行数据探索分析"""
-    print("🔍 开始数据探索分析...")
+    """Perform data exploration analysis"""
+    print("🔍 Starting data exploration analysis...")
     
     # 初始化
     processor = DataProcessor()
     visualizer = ResultVisualizer()
     
     try:
+        # 设置 seaborn 样式
+        sns.set_style("whitegrid")
+        sns.set_palette("husl")
+
         # 加载数据
         df = processor.load_data()
-        print(f"✅ 数据加载成功:")
-        print(f"- 总记录数: {len(df):,}")
-        print(f"- 时间范围: {df['Date'].min()} 到 {df['Date'].max()}")
-        print(f"- 口岸数量: {df['Control Point'].nunique()}")
+        
+        # 过滤数据，只保留2023-2025年的数据
+        df['Date'] = pd.to_datetime(df['Date'])
+        start_date = '2023-01-01'
+        end_date = '2025-12-31'
+        df = df[(df['Date'] >= start_date) & (df['Date'] <= end_date)]
+        
+        print(f"✅ Data loaded and filtered successfully:")
+        print(f"- Total records: {len(df):,}")
+        print(f"- Date range: {df['Date'].min().strftime('%Y-%m-%d')} to {df['Date'].max().strftime('%Y-%m-%d')}")
+        print(f"- Number of control points: {df['Control Point'].nunique()}")
         
         # 基本统计信息
-        print("\n📊 数据统计信息:")
+        print("\n📊 Data statistics:")
         print(df.describe())
         
         # 口岸列表
         control_points = df['Control Point'].unique()
-        print(f"\n🏢 所有口岸: {list(control_points)}")
+        print(f"\n🏢 All control points: {list(control_points)}")
         
         # 入境/出境分布
         arrival_departure_dist = df['Arrival / Departure'].value_counts()
-        print(f"\n↕️ 入境/出境分布:\n{arrival_departure_dist}")
+        print(f"\n↕️ Arrival/Departure distribution:\n{arrival_departure_dist}")
         
         # 创建探索性图表
         create_exploratory_charts(df, visualizer)
@@ -60,16 +68,16 @@ def explore_data():
         # 目标口岸分析
         analyze_target_points(df, processor)
         
-        print("\n✅ 数据探索完成!")
+        print("\n✅ Data exploration completed!")
         
     except Exception as e:
-        print(f"❌ 数据探索失败: {e}")
+        print(f"❌ Data exploration failed: {e}")
         import traceback
         traceback.print_exc()
 
 def create_exploratory_charts(df, visualizer):
-    """创建探索性图表"""
-    print("\n📈 生成探索性图表...")
+    """Create exploratory charts"""
+    print("\n📈 Generating exploratory charts...")
     
     try:
         # 总体趋势图
@@ -78,84 +86,95 @@ def create_exploratory_charts(df, visualizer):
         # 1. 按日期聚合的总客流量
         plt.subplot(2, 2, 1)
         daily_total = df.groupby('Date')['Total'].sum()
-        plt.plot(daily_total.index, daily_total.values)
-        plt.title('每日总客流量趋势')
-        plt.xlabel('日期')
-        plt.ylabel('客流量')
+        sns.lineplot(x=daily_total.index, y=daily_total.values)
+        plt.title('Daily Total Passenger Flow Trend (2023-2025)')
+        plt.xlabel('Date')
+        plt.ylabel('Passenger Flow')
         plt.xticks(rotation=45)
         
         # 2. 各口岸客流量分布
         plt.subplot(2, 2, 2)
         point_totals = df.groupby('Control Point')['Total'].sum().sort_values(ascending=False)
-        point_totals.head(10).plot(kind='bar')
-        plt.title('各口岸总客流量排名 (Top 10)')
-        plt.xlabel('口岸')
-        plt.ylabel('总客流量')
-        plt.xticks(rotation=45)
+        top_10_points = point_totals.head(10)
+        # 创建 DataFrame 用于 seaborn
+        top_10_df = pd.DataFrame({
+            'Control Point': top_10_points.index,
+            'Total': top_10_points.values
+        })
+        sns.barplot(data=top_10_df, x='Total', y='Control Point')
+        plt.title('Top 10 Control Points by Passenger Flow (2023-2025)')
+        plt.xlabel('Total Passenger Flow')
+        plt.ylabel('Control Point')
         
         # 3. 入境 vs 出境比例
         plt.subplot(2, 2, 3)
         direction_totals = df.groupby('Arrival / Departure')['Total'].sum()
         plt.pie(direction_totals.values, labels=direction_totals.index, autopct='%1.1f%%')
-        plt.title('入境 vs 出境比例')
+        plt.title('Arrival vs Departure Proportion (2023-2025)')
         
         # 4. 旅客类型分布
         plt.subplot(2, 2, 4)
         visitor_types = ['Hong Kong Residents', 'Mainland Visitors', 'Other Visitors']
         type_totals = df[visitor_types].sum()
         plt.pie(type_totals.values, labels=type_totals.index, autopct='%1.1f%%')
-        plt.title('旅客类型分布')
+        plt.title('Visitor Type Distribution (2023-2025)')
         
         plt.tight_layout()
-        plt.savefig(os.path.join(Settings.RESULT_DIR, 'charts', 'data_exploration.png'), 
+        plt.savefig(os.path.join(Settings.RESULT_DIR, 'charts', 'data_exploration_2023_2025.png'), 
                     dpi=300, bbox_inches='tight')
         plt.close()
         
-        print("✅ 探索性图表已保存")
+        print("✅ Exploratory charts saved")
         
     except Exception as e:
-        print(f"❌ 图表生成失败: {e}")
+        print(f"❌ Chart generation failed: {e}")
 
 def analyze_target_points(df, processor):
-    """分析目标口岸数据"""
-    print("\n🎯 分析目标口岸...")
+    """Analyze target control points data"""
+    print("\n🎯 Analyzing target control points...")
     
     for control_point in Settings.TARGET_CONTROL_POINTS:
-        print(f"\n分析口岸: {control_point}")
+        print(f"\nAnalyzing control point: {control_point}")
         
         try:
             # 准备训练数据
             ts_data = processor.prepare_training_data(control_point)
-            print(f"- 数据点数: {len(ts_data)}")
-            print(f"- 时间范围: {ts_data.index.min()} 到 {ts_data.index.max()}")
-            print(f"- 平均值: {ts_data.mean():.0f}")
-            print(f"- 标准差: {ts_data.std():.0f}")
+            
+            # 过滤时间序列数据，只保留2023-2025年
+            start_date = '2023-01-01'
+            end_date = '2025-12-31'
+            ts_data = ts_data[(ts_data.index >= start_date) & (ts_data.index <= end_date)]
+            
+            print(f"- Data points: {len(ts_data)}")
+            print(f"- Date range: {ts_data.index.min().strftime('%Y-%m-%d')} to {ts_data.index.max().strftime('%Y-%m-%d')}")
+            print(f"- Mean: {ts_data.mean():.0f}")
+            print(f"- Standard deviation: {ts_data.std():.0f}")
             
             # 创建单个口岸趋势图
             plt.figure(figsize=(10, 6))
             plt.plot(ts_data.index, ts_data.values, linewidth=2)
-            plt.title(f'{control_point} - 非香港居民入境旅客趋势')
-            plt.xlabel('日期')
-            plt.ylabel('旅客数量')
+            plt.title(f'{control_point} - Non-Hong Kong Resident Arrivals Trend (2023-2025)')
+            plt.xlabel('Date')
+            plt.ylabel('Number of Passengers')
             plt.grid(True, alpha=0.3)
             plt.xticks(rotation=45)
             
             # 保存图表
-            filename = f"{control_point.replace(' ', '_')}_trend.png"
+            filename = f"{control_point.replace(' ', '_')}_trend_2023_2025.png"
             plt.savefig(os.path.join(Settings.RESULT_DIR, 'charts', filename), 
                        dpi=300, bbox_inches='tight')
             plt.close()
             
-            print(f"✅ {control_point} 分析完成")
+            print(f"✅ {control_point} analysis completed")
             
         except Exception as e:
-            print(f"- 分析失败: {str(e)}")
+            print(f"- Analysis failed: {str(e)}")
 
 if __name__ == "__main__":
     print("=" * 60)
-    print("🚀 启动数据探索脚本")
+    print("🚀 Starting data exploration script (2023-2025)")
     print("=" * 60)
     explore_data()
     print("=" * 60)
-    print("🎉 脚本执行结束")
+    print("🎉 Script execution completed")
     print("=" * 60)

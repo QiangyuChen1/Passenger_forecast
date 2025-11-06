@@ -1,0 +1,4 @@
+control_point,arima_order,aic,data_points,training_period,model_path
+Airport,"(2, 0, 0)",-46.774766183138865,29,2023-05-onwards,C:\Users\86181\Desktop\CITYU\SEMA\5001\Passenger_forecast\models\arima_Airport_2023_05_onwards.pkl
+Shenzhen Bay,"(1, 0, 1)",-18.091211137791856,29,2023-05-onwards,C:\Users\86181\Desktop\CITYU\SEMA\5001\Passenger_forecast\models\arima_Shenzhen_Bay_2023_05_onwards.pkl
+Hong Kong-Zhuhai-Macao Bridge,"(0, 0, 1)",-9.222081909320469,30,2023-05-onwards,C:\Users\86181\Desktop\CITYU\SEMA\5001\Passenger_forecast\models\arima_Hong_Kong_Zhuhai_Macao_Bridge_2023_05_onwards.pkl
